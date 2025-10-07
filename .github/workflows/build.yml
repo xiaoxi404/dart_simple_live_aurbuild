@@ -1,0 +1,23 @@
+name: dart_simple_live Build
+
+on: workflow_dispatch
+
+jobs:
+  aur-pkgbuild:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: git clone
+        run: |
+            git clone --depth 1 https://aur.archlinux.org/simple-live-app.git .
+
+      - name: Makepkg Build and Check
+        id: makepkg
+        uses: xiaoxi404/pkgbuild-action@main
+
+      - name: Upload Package Archive
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            ${{ steps.makepkg.outputs.pkgfile0 }}
+            *.log
