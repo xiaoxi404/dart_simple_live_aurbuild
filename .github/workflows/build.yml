@@ -7,9 +7,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: git clone
-        run: |
-            git clone --depth 1 https://aur.archlinux.org/simple-live-app.git .
+      - name: checkout
+        uses: actions/checkout@v4
 
       - name: Makepkg Build and Check
         id: makepkg
