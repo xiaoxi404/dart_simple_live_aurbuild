@@ -1,93 +1,40 @@
-# Maintainer: q234 rty <q23456yuiop at gmail dot com>
-# Contributor: garionion <garionion at entr0py.de>
-# Contributor: The one with the braid <info@braid.business>
-# thanks to celogeek, sseneca, dr460nf1r3, dr460nf1r3 and AverytheFurry for pointing out multiple things
+pkgname=slive
+pkgver=1.8.3
+pkgrel=1
+pkgdesc="Slive is a lightweight and user-friendly application for watching live streams across multiple platforms, offering a seamless watching experience with support for popular streaming services."
+arch=('x86_64')
+url="https://github.com/SlotSun/dart_simple_live"
+license=('GPL-3.0-or-later')
+depends=('gtk3')
+makedepends=('git' 'clang' 'cmake' 'ninja' 'fvm')
+source=("git+${url}.git#tag=v${pkgver}")
+sha256sums=('efe3cb239668d95d22211474ef7b8c0f52be4373a615f028091b796f4b9fa036')
 
-pkgname=simple-live-app
-_pkgname=dart_simple_live
-_appname=simple_live_app
-pkgver=1.9.4
-pkgrel=2
-pkgdesc='An app for watching live'
-arch=('x86_64' 'aarch64')
-url='https://github.com/xiaoyaocz/dart_simple_live'
-license=('GPL-3.0-only')
-_flutterchannel=stable
-_flutterversion=3.22.3
-depends=('xdg-user-dirs' 'gtk3' 'mpv')
-makedepends=('ninja' 'cmake' 'clang' 'git' 'patchelf')
-source=(
-    "flutter-${_flutterversion}.tar.xz::https://storage.googleapis.com/flutter_infra_release/releases/${_flutterchannel}/linux/flutter_linux_${_flutterversion}-${_flutterchannel}.tar.xz"
-    "git+https://github.com/xiaoyaocz/dart_simple_live.git#commit=dca4e88b6004a1297b0598296f4136d377e1f3cd"
-)
-sha256sums=('9c5f70ba118b9163552144901a2efd91d40b22a68a04e67271d6a5ad936e8368'
-            '9bd1518aec234854115cb47f64d107ebf89a3bc3f76c48230ced7ba66e54b4de')
-case "${CARCH}" in
-  "x86_64")
-    export _dartarch="x64"
-    ;;
-  "aarch64")
-    export _dartarch="arm64"
-    # fix incompatible C(XX)FLAGS on Arch Linux on ARM
-    CXXFLAGS="${CXXFLAGS/-fstack-protector-strong/}"
-    CXXFLAGS="${CXXFLAGS/-fstack-clash-protection/}"
-
-    CFLAGS="${CFLAGS/-fstack-protector-strong/}"
-    CFLAGS="${CFLAGS/-fstack-clash-protection/}"
-    ;;
-esac
 prepare() {
-  export PATH="${srcdir}/flutter/bin:$PATH"
-  flutter config --no-analytics
-  flutter config --enable-linux-desktop
-  cd ${_pkgname}/simple_live_app
-  sed -i "s/use_header_bar = TRUE/use_header_bar = FALSE/g" linux/my_application.cc
-  git apply ${srcdir}/0001-feat-use-playlist-for-multiple-line.patch
-  rm -rf pub-cache
-  mkdir pub-cache
-  export PUB_CACHE="${srcdir}/${_pkgname}-${pkgver}/${_appname}/pub-cache"
-  flutter clean
-  flutter pub get
+    cd "$srcdir/dart_simple_live/simple_live_app"
+    fvm install
+	fvm flutter --disable-analytics
+	fvm flutter --no-version-check pub get
 }
 
 build() {
-  export PATH="${srcdir}/flutter/bin:$PATH"
-  export PUB_CACHE="${srcdir}/${_pkgname}-${pkgver}/${_appname}/pub-cache"
-  cd ${_pkgname}/${_appname}
-  flutter build linux --no-pub
+    cd "$srcdir/dart_simple_live/simple_live_app"
+    fvm flutter build linux --release --no-pub \
+    --dart-define build.version="${pkgver}"
 }
 
-package() {  
-  # enter the output directory of the Flutter build
-  cd "${srcdir}/${_pkgname}/simple_live_app/build/linux/$_dartarch/release"
+package() {
+    cd "$srcdir/dart_simple_live/simple_live_app"
+    # 复制构建产物
+ 	pushd build/linux/x64/release
+	install -Dm755 "bundle/Slive" -t "${pkgdir}/usr/lib/${pkgname}/"
+    cmake -DCMAKE_INSTALL_PREFIX="${pkgdir}/usr/lib/${pkgname}" .
+	cmake -P cmake_install.cmake
+	popd
+    # 创建启动器
+    install -dm755 "${pkgdir}/usr/bin"
+	ln -s "/usr/lib/${pkgname}/Slive" "${pkgdir}/usr/bin/Slive"
 
-  # configure the installation directory using cmake
-  cmake -DCMAKE_INSTALL_PREFIX=${pkgdir}/usr/lib/${_pkgname} .
-  # install the Flutter project using cmake
-  cmake -P cmake_install.cmake
-  for f in ${pkgdir}/usr/lib/${_pkgname}/lib/*.so; do patchelf --shrink-rpath --allowed-rpath-prefixes '$ORIGIN' "$f"; done
-  for f in ${pkgdir}/usr/lib/${_pkgname}/lib/*.so; do if [ -z "$(patchelf --print-rpath $f)" ]; then patchelf --remove-rpath "$f"; fi; done
-  patchelf --add-needed libquickjs_c_bridge_plugin.so "${pkgdir}/usr/lib/${_pkgname}/${_appname}"
-  # link executable into PATH
-  install -dm755 "${pkgdir}/usr/bin"
-  ln -s "/usr/lib/${_pkgname}/${_appname}" "${pkgdir}/usr/bin/${_pkgname}"  
-  install -Dm644 "${srcdir}/${_pkgname}/assets/logo.png" "${pkgdir}/usr/share/pixmaps/${_pkgname}.png" # icon
-  install -Dm644 "${srcdir}/${_pkgname}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-
-  # desktop entry
-  install -dm755 "${pkgdir}/usr/share/applications"
-  cat > ${pkgdir}/usr/share/applications/${_pkgname}.desktop << EOF
-[Desktop Entry]
-Type=Application
-Version=${pkgver}
-Name=Simple Live App
-Comment=A Live Player
-Exec=${_pkgname}
-Icon=${_pkgname}
-Terminal=false
-EOF
+	install -Dm644 assets/logo.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/${pkgname}.png"
+    install -Dm644 "linux/packaging/aur/${pkgname}.desktop" -t "${pkgdir}/usr/share/applications/"
 }
-
-source+=("0001-feat-use-playlist-for-multiple-line.patch")
-sha256sums+=("c4a999c721858d6045b7d13246c3e61eb02f244b0a98769a45034fab240ea96e")
-# vim: set sw=2 ts=2 et:
