@@ -10,7 +10,9 @@ pkgbase = slive
 	makedepends = cmake
 	makedepends = ninja
 	makedepends = fvm
+	depends = xdg-user-dirs
 	depends = gtk3
+	depends = mpv
 	source = git+https://github.com/SlotSun/dart_simple_live.git#tag=v1.8.3
 	sha256sums = efe3cb239668d95d22211474ef7b8c0f52be4373a615f028091b796f4b9fa036
 

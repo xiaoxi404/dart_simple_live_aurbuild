@@ -5,7 +5,7 @@ pkgdesc="Slive is a lightweight and user-friendly application for watching live 
 arch=('x86_64')
 url="https://github.com/SlotSun/dart_simple_live"
 license=('GPL-3.0-or-later')
-depends=('gtk3')
+depends=('xdg-user-dirs' 'gtk3' 'mpv')
 makedepends=('git' 'clang' 'cmake' 'ninja' 'fvm')
 source=("git+${url}.git#tag=v${pkgver}")
 sha256sums=('efe3cb239668d95d22211474ef7b8c0f52be4373a615f028091b796f4b9fa036')
