@@ -1,12 +1,12 @@
 pkgname=slive
 pkgver=1.8.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Slive is a lightweight and user-friendly application for watching live streams across multiple platforms, offering a seamless watching experience with support for popular streaming services."
 arch=('x86_64')
 url="https://github.com/SlotSun/dart_simple_live"
 license=('GPL-3.0-or-later')
 depends=('xdg-user-dirs' 'gtk3' 'mpv')
-makedepends=('git' 'clang' 'cmake' 'ninja' 'fvm')
+makedepends=('git' 'clang' 'cmake' 'ninja' 'fvm' 'patchelf')
 source=("git+${url}.git#tag=v${pkgver}")
 sha256sums=('efe3cb239668d95d22211474ef7b8c0f52be4373a615f028091b796f4b9fa036')
 
@@ -31,6 +31,9 @@ package() {
     cmake -DCMAKE_INSTALL_PREFIX="${pkgdir}/usr/lib/${pkgname}" .
 	cmake -P cmake_install.cmake
 	popd
+
+    patchelf --set-rpath '$ORIGIN' ${pkgdir}/usr/lib/${pkgname}/lib/*.so
+
     # 创建启动器
     install -dm755 "${pkgdir}/usr/bin"
 	ln -s "/usr/lib/${pkgname}/Slive" "${pkgdir}/usr/bin/Slive"
